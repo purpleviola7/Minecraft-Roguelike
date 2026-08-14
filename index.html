@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Paper Roguelike</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1, h2 { color: #55ff55; text-shadow: 2px 2px #003300; margin-bottom: 5px; }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 3px solid #444;
+            margin-bottom: 20px;
+        }
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 2px solid #555;
+            margin-bottom: 20px;
+        }
+        .emerald { color: #55ff55; }
+        .hp { color: #ff5555; }
+        .btn {
+            background-color: #5555ff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 0 4px #0000aa;
+            margin: 5px;
+            transition: 0.1s;
+        }
+        .btn:active {
+            box-shadow: 0 0px #0000aa;
+            transform: translateY(4px);
+        }
+        .btn-danger { background-color: #ff5555; box-shadow: 0 4px #aa0000; }
+        .btn-danger:active { box-shadow: 0 0px #aa0000; }
+        .log-box {
+            background: #111;
+            border: 2px solid #555;
+            padding: 15px;
+            height: 150px;
+            overflow-y: auto;
+            border-radius: 5px;
+            font-family: monospace;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        .combat-zone {
+            background: #3d2d2d;
+            border: 2px solid #ff5555;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>⛏️ Minecraft Roguelike</h1>
+    <p style="margin-top:0; color:#aaa;">Solo Runs • Shared Lobby System</p>
+
+    <!-- MAIN GAME PANEL -->
+    <div class="container">
+        <div class="stats-bar">
+            <span>❤️ HP: <span id="current-hp" class="hp">10</span>/10</span>
+            <span>🟢 Run Emeralds: <span id="run-emeralds" class="emerald">0</span></span>
+            <span>🏛️ Total Vault Emeralds: <span id="vault-emeralds" class="emerald">0</span></span>
+        </div>
+
+        <div id="action-area" style="text-align: center;">
+            <button class="btn" id="explore-btn" onclick="exploreCave()">Mine Next Room! (Roll Die)</button>
+        </div>
+
+        <div class="combat-zone" id="combat-zone">
+            <h3 id="mob-title" style="color: #ff5555; margin-top: 0;">⚠️ Mob Spawned!</h3>
+            <p id="mob-stats"></p>
+            <button class="btn btn-danger" id="attack-btn" onclick="attackMob()">Roll Attack Die</button>
+        </div>
+
+        <h3 style="margin-bottom: 5px;">📜 Adventure Log:</h3>
+        <div class="log-box" id="log">You stand at the entrance of a dark cave system... Ready your pickaxe!</div>
+    </div>
+
+    <script>
+        // Game State Variables
+        let hp = 10;
+        let runEmeralds = 0;
+        let vaultEmeralds = 0;
+
+        // Active Monster Tracking
+        let currentMob = null;
+
+        const logBox = document.getElementById('log');
+
+        function addLog(text, color = '#fff') {
+            logBox.innerHTML += `<div style="color: ${color}">${text}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        // 🎲 1. CAVE EXPLORATION
+        function exploreCave() {
+            if (hp <= 0) return;
+            
+            // Simulating a 6-sided die roll
+            let roll = Math.floor(Math.random() * 6) + 1;
+            addLog(`🎲 You rolled a ${roll}!`, '#aaa');
+
+            if (roll === 3 || roll === 4) {
+                spawnMonster();
+            } else {
+                addLog("🧱 Dark Tunnel: The path is clear. Draw a safe straight line on your graph paper.", '#ffff55');
+            }
+        }
+
+        // 🧟 2. MOB GENERATION
+        const mobs = [
+            { name: "🏹 Skeleton", hp: 3, dmg: 1, reward: 1 },
+            { name: "🏹 Skeleton", hp: 3, dmg: 1, reward: 1 },
+            { name: "🧟 Zombie", hp: 4, dmg: 1, reward: 1 },
+            { name: "🧟 Zombie", hp: 4, dmg: 1, reward: 1 },
+            { name: "💥 Creeper", hp: 5, dmg: 2, reward: 2 },
+            { name: "👁️ Enderman", hp: 6, dmg: 2, reward: 3 }
+        ];
+
+        function spawnMonster() {
+            let roll = Math.floor(Math.random() * 6);
+            // Deep copy mob stats
+            currentMob = { ...mobs[roll] };
+
+            document.getElementById('explore-btn').disabled = true;
+            document.getElementById('combat-zone').style.display = 'block';
+            updateCombatUI();
+
+            addLog(`⚠️ A wild ${currentMob.name} jumped from the shadows!`, '#ff5555');
+        }
+
+        function updateCombatUI() {
+            if (currentMob) {
+                document.getElementById('mob-title').innerText = `⚔️ Fighting ${currentMob.name}`;
+                document.getElementById('mob-stats').innerText = `Enemy HP: ${currentMob.hp} | Enemy Attack Damage: ${currentMob.dmg}`;
+            }
+        }
+
+        // ⚔️ 3. COMBAT ENGINE
+        function attackMob() {
+            if (!currentMob || hp <= 0) return;
+
+            // Player Attack Roll
+            let playerRoll = Math.floor(Math.random() * 6) + 1;
+            addLog(`⚔️ You attack! Rolled a ${playerRoll} = Deal ${playerRoll} DMG.`, '#55ff55');
+
+            // Check if Creeper exploded on turn 1
+            if (currentMob.name === "💥 Creeper" && playerRoll < currentMob.hp) {
+                hp -= 3;
+                addLog(`💥 Tssss... BOOM! The Creeper exploded! You took 3 damage and got 0 loot.`, '#ff5555');
+                endCombat(false);
+                checkDeath();
+                return;
+            }
+
+            // Standard Damage Application
+            if (playerRoll >= currentMob.hp) {
+                // Victory!
+                runEmeralds += currentMob.reward;
+                addLog(`🎉 Defeated the ${currentMob.name}! Found +${currentMob.reward} Emerald(s).`, '#55ff55');
+                document.getElementById('run-emeralds').innerText = runEmeralds;
+                endCombat(true);
+            } else {
+                // Monster Counter-attacks
+                currentMob.hp -= playerRoll;
+                hp -= currentMob.dmg;
+                addLog(`💥 The ${currentMob.name} survives with ${currentMob.hp} HP left and hits you back for ${currentMob.dmg} DMG.`, '#ff5555');
+                document.getElementById('current-hp').innerText = hp;
+                updateCombatUI();
+                checkDeath();
+            }
+        }
+
+        function endCombat(won) {
+            currentMob = null;
+            document.getElementById('combat-zone').style.display = 'none';
+            document.getElementById('explore-btn').disabled = false;
+        }
+
+        function checkDeath() {
+            if (hp <= 0) {
+                hp = 0;
+                document.getElementById('current-hp').innerText = hp;
+                vaultEmeralds += runEmeralds;
+                document.getElementById('vault-emeralds').innerText = vaultEmeralds;
+
+                addLog(`💀 YOU DIED! Lost current inventory and map. Mined Emeralds safely banked into your vault.`, '#ff5555');
+                
+                // Show Respawn Button
+                document.getElementById('action-area').innerHTML = `<button class="btn btn-danger" onclick="respawn()">Respawn at Camp</button>`;
+                document.getElementById('combat-zone').style.display = 'none';
+            }
+        }
+
+        function respawn() {
+            hp = 10;
+            runEmeralds = 0;
+            document.getElementById('current-hp').innerText = hp;
+            document.getElementById('run-emeralds').innerText = runEmeralds;
+            document.getElementById('action-area').innerHTML = `<button class="btn" id="explore-btn" onclick="exploreCave()">Mine Next Room! (Roll Die)</button>`;
+            addLog(`--- Fresh Spawn --- Ready your pickaxe for a new run!`, '#aaa');
+        }
+    </script>
+</body>
+</html>
