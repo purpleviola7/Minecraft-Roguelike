@@ -49,6 +49,8 @@
         .hearts-container {
             display: inline-flex;
             gap: 2px;
+            flex-wrap: wrap;
+            max-width: 320px;
         }
         .heart {
             width: 14px;
@@ -56,7 +58,7 @@
             background-color: #ff2222;
             position: relative;
             transform: rotate(-45deg);
-            margin-top: 3px;
+            margin: 6px 4px 0 4px;
             display: inline-block;
             box-shadow: inset -2px -2px #aa0000;
         }
@@ -86,6 +88,7 @@
         }
 
         .emerald-text { color: #55ff55; }
+        .gold-text { color: #ffaa00; }
 
         .map-wrapper {
             display: flex;
@@ -116,6 +119,7 @@
         .cell.tunnel { background-color: #555; border-color: #777; box-shadow: inset -4px -4px #333; }
         .cell.mob { background-color: #3d2d2d; border-color: #ff5555; }
         .cell.heal { background-color: #2d3d2d; border-color: #55ff55; }
+        .cell.chest { background-color: #4a3319; border-color: #ffaa00; }
 
         .btn {
             font-family: 'Press Start 2P', monospace;
@@ -148,13 +152,43 @@
             text-transform: uppercase;
         }
 
-        .combat-overlay {
+        .combat-overlay, .card-overlay {
             background: #331111;
             border: 4px solid #ff5555;
             padding: 15px;
             margin-top: 15px;
             text-align: center;
             display: none;
+        }
+        .card-overlay {
+            background: #1a2a1a;
+            border-color: #55ff55;
+        }
+        .cards-row-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .upgrade-card {
+            background: #2c3e2c;
+            border: 3px solid #55ff55;
+            padding: 10px;
+            width: 140px;
+            cursor: pointer;
+            box-shadow: inset -3px -3px #1a2a1a, inset 3px 3px #77ff77;
+        }
+        .upgrade-card:hover {
+            background: #3d553d;
+        }
+        .card-title {
+            font-size: 8px;
+            color: #ffaa00;
+            margin-bottom: 6px;
+        }
+        .card-desc {
+            font-size: 7px;
+            color: #fff;
         }
     </style>
 </head>
@@ -166,12 +200,15 @@
     <div class="container">
         <div class="stats-row">
             <div>
-                <span style="display:block; font-size:8px; margin-bottom:4px; color:#aaa;">HEALTH POOL</span>
+                <span style="display:block; font-size:8px; margin-bottom:4px; color:#aaa;" id="dmg-label">ATK: 1-6 | HP POOL</span>
                 <div class="hearts-container" id="hearts-box"></div>
             </div>
-            <div style="text-align: right;">
-                <div>RUN: <span id="run-emeralds" class="emerald-text">0</span> 🟢</div>
-                <div style="font-size: 8px; margin-top:4px; color:#aaa;">VAULT: <span id="vault-emeralds" class="emerald-text">0</span> 🟢</div>
+            <div style="text-align: right; font-size: 8px;">
+                <div>RUN EME: <span id="run-emeralds" class="emerald-text">0</span> 🟢</div>
+                <div>RUN GLD: <span id="run-gold" class="gold-text">0</span> 🟡</div>
+                <div style="margin-top:4px; border-top:1px solid #444; padding-top:2px; color:#aaa;">
+                    VAULT EME: <span id="vault-emeralds" class="emerald-text">0</span> 🟢
+                </div>
             </div>
         </div>
 
@@ -190,6 +227,13 @@
             <button class="btn btn-danger" onclick="attackMob()">Strike Target</button>
         </div>
 
+        <div class="card-overlay" id="chest-zone">
+            <div style="font-size:32px; margin-bottom:5px;">📦</div>
+            <h3 style="color: #55ff55; margin: 0 0 5px 0; font-size:11px;">MINECRAFT LOOT CHEST</h3>
+            <p style="font-size:8px; color:#aaa; margin:0;">CHOOSE ONE PERK CARD TO EQUIP:</p>
+            <div class="cards-row-wrapper" id="cards-container"></div>
+        </div>
+
         <p style="font-size:8px; color:#aaa; margin: 15px 0 5px 2px;">COMMUNICATION LOG:</p>
         <div class="log-container" id="log">Ready to explore chunk (0,0). Let's dig!</div>
     </div>
@@ -197,8 +241,12 @@
     <script>
         // Global Game State Variables
         let hp = 10;
+        let maxHp = 10;
+        let bonusDamage = 0;
         let runEmeralds = 0;
+        let runGold = 0;
         let vaultEmeralds = 0;
+        let stepsTaken = 0;
 
         let playerX = 0;
         let playerY = 0;
@@ -223,7 +271,8 @@
         function renderHearts() {
             const container = document.getElementById('hearts-box');
             container.innerHTML = '';
-            for(let i=0; i<10; i++) {
+            document.getElementById('dmg-label').innerText = `ATK: 1-6 (+${bonusDamage}) | HP POOL`;
+            for(let i=0; i<maxHp; i++) {
                 let heartHtml = i < hp ? '<div class="heart"></div>' : '<div class="heart empty"></div>';
                 container.innerHTML += heartHtml;
             }
@@ -238,13 +287,13 @@
                     const cell = document.createElement('div');
                     cell.className = `cell ${cellType}`;
                     
-                    // Priority rendering: display player avatar if coordinates match current player step position
                     if(x === playerX && y === playerY && hp > 0) {
                         cell.innerHTML = "🧙";
                     } else {
                         if(cellType === 'mob') cell.innerHTML = "👾";
                         if(cellType === 'tunnel') cell.innerHTML = "░";
                         if(cellType === 'heal') cell.innerHTML = "❤️";
+                        if(cellType === 'chest') cell.innerHTML = "📦";
                     }
                     
                     gridEl.appendChild(cell);
@@ -260,13 +309,13 @@
             for(let y=0; y<5; y++) {
                 worldMap.push(new Array(5).fill('unexplored'));
             }
-            worldMap[playerY][playerX] = 'tunnel'; // Start point tracking trail
+            worldMap[playerY][playerX] = 'tunnel';
             createGridUI();
         }
         function movePlayer() {
             if (hp <= 0) return;
 
-            // Step configuration move indexes
+            stepsTaken++;
             playerX++;
             if(playerX >= 5) {
                 playerX = 0;
@@ -274,56 +323,99 @@
             }
 
             if(playerY >= 5) {
-                addLog("🎉 LEVEL CLEAR! You navigated the cavern block. +5 Bonus Emeralds!", "#55ff55");
+                addLog("🎉 LEVEL CLEAR! Cavern shaft cleared. +5 Emeralds, +10 Gold!", "#55ff55");
                 runEmeralds += 5;
+                runGold += 10;
                 document.getElementById('run-emeralds').innerText = runEmeralds;
+                document.getElementById('run-gold').innerText = runGold;
                 resetWorldMap();
                 return;
             }
 
-            let roll = Math.floor(Math.random() * 6) + 1;
-            addLog(`DICE ROLL: ${roll}`, '#777');
+            let baseMobWeight = 0.33; 
+            let difficultyMultiplier = baseMobWeight + (stepsTaken * 0.025);
+            let finalMobChance = Math.min(0.75, difficultyMultiplier);
 
-            if (roll === 3 || roll === 4) {
+            let randomRoll = Math.random();
+            
+            if (randomRoll < 0.08) {
+                worldMap[playerY][playerX] = 'chest';
+                createGridUI();
+                openChestCardZone();
+            }
+            else if (randomRoll < 0.08 + finalMobChance) {
                 worldMap[playerY][playerX] = 'mob';
                 createGridUI();
                 spawnMonster();
-            } else if (roll === 6) {
+            } 
+            else if (randomRoll < 0.08 + finalMobChance + 0.12) {
                 worldMap[playerY][playerX] = 'heal';
                 createGridUI();
                 triggerHealingRoom();
-            } else {
+            } 
+            else {
                 worldMap[playerY][playerX] = 'tunnel';
-                addLog("TUNNEL SECURE. Advanced safely.", '#ffff55');
+                addLog("TUNNEL SECURE. Advanced safely deeper into the mine shaft.", '#ffff55');
                 createGridUI();
             }
+        }
+
+        function openChestCardZone() {
+            document.getElementById('explore-btn').disabled = true;
+            document.getElementById('chest-zone').style.display = 'block';
+            addLog("📦 DUNGEON CHEST DISCOVERED! Found lost card blueprints.", "#ffaa00");
+
+            const cardPool = [
+                { type: 'dmg', title: 'SHARPNESS', desc: '+2 Sword Strike Atk', val: 2 },
+                { type: 'hp', title: 'VITALITY', desc: '+2 Max Heart Cap', val: 2 },
+                { type: 'gold', title: 'FORTUNE', desc: 'Claim +15 Gold Ingots', val: 15 }
+            ];
+
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            cardPool.forEach(card => {
+                let cardEl = document.createElement('div');
+                cardEl.className = 'upgrade-card';
+                cardEl.innerHTML = `<div class="card-title">${card.title}</div><div class="card-desc">${card.desc}</div>`;
+                cardEl.onclick = () => selectCardPerk(card);
+                container.appendChild(cardEl);
+            });
+        }
+
+        function selectCardPerk(card) {
+            if (card.type === 'dmg') {
+                bonusDamage += card.val;
+                addLog(`✨ CARD ACTIVE: Embedded Sharpness! Damage raised permanently by +${card.val}.`, '#55ff55');
+            } else if (card.type === 'hp') {
+                maxHp += card.val;
+                hp += card.val;
+                addLog(`✨ CARD ACTIVE: Vitality Infusion! Max heart capacity raised by +${card.val}.`, '#55ff55');
+            } else if (card.type === 'gold') {
+                runGold += card.val;
+                document.getElementById('run-gold').innerText = runGold;
+                addLog(`✨ CARD ACTIVE: Fortune Claim! Looted +${card.val} raw Gold Ingots.`, '#ffaa00');
+            }
+
+            renderHearts();
+            document.getElementById('chest-zone').style.display = 'none';
+            document.getElementById('explore-btn').disabled = false;
+            createGridUI();
         }
 
         function triggerHealingRoom() {
             let rateRoll = Math.floor(Math.random() * 100) + 1;
             let healAmount = 1;
 
-            if (rateRoll <= 4) {
-                healAmount = 4;
-            } else if (rateRoll <= 15) {
-                healAmount = 3;
-            } else if (rateRoll <= 40) {
-                healAmount = 2;
-            } else {
-                healAmount = 1;
-            }
+            if (rateRoll <= 4) healAmount = 4;
+            else if (rateRoll <= 15) healAmount = 3;
+            else if (rateRoll <= 40) healAmount = 2;
 
-            hp += healAmount;
-            if (hp > 10) hp = 10;
-
-            let rarityText = healAmount === 4 ? "🌟 ULTRA RARE! 🌟" : healAmount === 3 ? "✨ RARE! ✨" : "";
-            addLog(`❤️ HEALING FOUNTAIN: Found a safe oasis! ${rarityText} Restored ${healAmount} heart(s).`, '#55ff55');
+            hp = Math.min(maxHp, hp + healAmount);
+            addLog(`❤️ HEALING FOUNTAIN: Restored ${healAmount} heart(s).`, '#55ff55');
             renderHearts();
-            
-            // Re-render immediately to place the wizard on top of the heart asset tile safely
             createGridUI();
         }
-
         function spawnMonster() {
             let roll = Math.floor(Math.random() * mobs.length);
             currentMob = { ...mobs[roll] };
@@ -343,10 +435,11 @@
                 document.getElementById('mob-stats').innerText = `HP: ${currentMob.hp} | DAMAGE: ${currentMob.dmg}`;
             }
         }
+
         function attackMob() {
             if (!currentMob || hp <= 0) return;
 
-            let playerRoll = Math.floor(Math.random() * 6) + 1;
+            let playerRoll = Math.floor(Math.random() * 6) + 1 + bonusDamage;
             addLog(`SWORD STRIKE: HIT FOR ${playerRoll} DAMAGE`, '#55ff55');
 
             if (currentMob.name === "CREEPER" && playerRoll < currentMob.hp) {
@@ -359,9 +452,16 @@
             }
 
             if (playerRoll >= currentMob.hp) {
-                runEmeralds += currentMob.reward;
-                addLog("🎉 REWARD RECLAIMED: +" + currentMob.reward + " EMERALDS", "#55ff55");
+                let emeraldGained = currentMob.reward;
+                let goldGained = currentMob.reward * 2;
+
+                runEmeralds += emeraldGained;
+                runGold += goldGained;
+
                 document.getElementById('run-emeralds').innerText = runEmeralds;
+                document.getElementById('run-gold').innerText = runGold;
+
+                addLog(`🎉 REWARD RECLAIMED: +${emeraldGained} Emerald 🟢 | +${goldGained} Gold 🟡`, "#55ff55");
                 endCombat();
             } else {
                 currentMob.hp -= playerRoll;
@@ -375,7 +475,6 @@
 
         function endCombat() {
             currentMob = null;
-            // Removed line resetting tile data map back to player so it permanently remains a mob square style layer
             createGridUI();
             document.getElementById('combat-zone').style.display = 'none';
             document.getElementById('explore-btn').disabled = false;
@@ -385,10 +484,11 @@
             if (hp <= 0) {
                 hp = 0;
                 renderHearts();
+                
                 vaultEmeralds += runEmeralds;
                 document.getElementById('vault-emeralds').innerText = vaultEmeralds;
 
-                addLog(`💀 YOU DIED. MINED EMERALDS TRANSFERRED TO LOBBY VAULT.`, '#ff5555');
+                addLog(`💀 YOU DIED. Mined Emeralds banked into vault. Run Gold was lost.`, '#ff5555');
                 document.getElementById('action-area').innerHTML = `<button class="btn btn-danger" onclick="respawn()">RESPAWN</button>`;
                 document.getElementById('combat-zone').style.display = 'none';
             }
@@ -396,15 +496,21 @@
 
         function respawn() {
             hp = 10;
+            maxHp = 10;
+            bonusDamage = 0;
             runEmeralds = 0;
-            renderHearts();
+            runGold = 0;
+            stepsTaken = 0;
+            
             document.getElementById('run-emeralds').innerText = runEmeralds;
+            document.getElementById('run-gold').innerText = runGold;
             document.getElementById('action-area').innerHTML = `<button class="btn btn-action" id="explore-btn" onclick="movePlayer()">Mine Next Chunk</button>`;
+            
+            renderHearts();
             resetWorldMap();
-            addLog(`--- RESPONDING TO CAMP --- WORLD RESET.`, '#aaa');
+            addLog(`--- RESPONDING TO CAMP --- Hardcore variables cleared. Cavern map generated.`, '#aaa');
         }
 
-        // Initialize Systems on Page Load
         renderHearts();
         resetWorldMap();
     </script>
