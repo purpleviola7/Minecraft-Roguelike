@@ -272,7 +272,8 @@
         function resetWorldMap() {
             playerX = 0;
             playerY = 0;
-            worldMap = Array(5).fill().map(() => Array(5).fill('unexplored'));
+            // Build the multi-layered grid correctly
+            worldMap = Array(5).fill(null).map(() => Array(5).fill('unexplored'));
             worldMap[0][0] = 'player';
             createGridUI();
         }
@@ -281,6 +282,3 @@
             { name: "SKELETON", hp: 3, dmg: 1, reward: 1, sprite: "🏹" },
             { name: "ZOMBIE", hp: 4, dmg: 1, reward: 1, sprite: "🧟" },
             { name: "CREEPER", hp: 5, dmg: 2, reward: 2, sprite: "💥" },
-            { name: "ENDERMAN", hp: 6, dmg: 2, reward: 3, sprite: "👁️" }
-        ];
-
