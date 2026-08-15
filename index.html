@@ -272,13 +272,9 @@
         function resetWorldMap() {
             playerX = 0;
             playerY = 0;
-            // Build the multi-layered grid correctly
-            worldMap = Array(5).fill(null).map(() => Array(5).fill('unexplored'));
-            worldMap[0][0] = 'player';
-            createGridUI();
-        }
-
-        const mobs = [
-            { name: "SKELETON", hp: 3, dmg: 1, reward: 1, sprite: "🏹" },
-            { name: "ZOMBIE", hp: 4, dmg: 1, reward: 1, sprite: "🧟" },
-            { name: "CREEPER", hp: 5, dmg: 2, reward: 2, sprite: "💥" },
+            
+            // Clean, hardcoded setup to completely bypass the chat formatting bug
+            let row0 = ['player', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
+            let row1 = ['unexplored', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
+            let row2 = ['unexplored', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
+            let row3 = ['unexplored', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
