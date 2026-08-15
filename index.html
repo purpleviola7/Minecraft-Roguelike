@@ -238,10 +238,14 @@
                     const cell = document.createElement('div');
                     cell.className = `cell ${cellType}`;
                     
-                    if(cellType === 'player') cell.innerHTML = "🧙";
-                    if(cellType === 'mob') cell.innerHTML = "👾";
-                    if(cellType === 'tunnel') cell.innerHTML = "░";
-                    if(cellType === 'heal') cell.innerHTML = "❤️";
+                    // Priority rendering: display player avatar if coordinates match current player step position
+                    if(x === playerX && y === playerY && hp > 0) {
+                        cell.innerHTML = "🧙";
+                    } else {
+                        if(cellType === 'mob') cell.innerHTML = "👾";
+                        if(cellType === 'tunnel') cell.innerHTML = "░";
+                        if(cellType === 'heal') cell.innerHTML = "❤️";
+                    }
                     
                     gridEl.appendChild(cell);
                 }
@@ -256,14 +260,13 @@
             for(let y=0; y<5; y++) {
                 worldMap.push(new Array(5).fill('unexplored'));
             }
-            worldMap[playerY][playerX] = 'player';
+            worldMap[playerY][playerX] = 'tunnel'; // Start point tracking trail
             createGridUI();
         }
         function movePlayer() {
             if (hp <= 0) return;
 
-            worldMap[playerY][playerX] = 'tunnel';
-            
+            // Step configuration move indexes
             playerX++;
             if(playerX >= 5) {
                 playerX = 0;
@@ -290,7 +293,7 @@
                 createGridUI();
                 triggerHealingRoom();
             } else {
-                worldMap[playerY][playerX] = 'player';
+                worldMap[playerY][playerX] = 'tunnel';
                 addLog("TUNNEL SECURE. Advanced safely.", '#ffff55');
                 createGridUI();
             }
@@ -317,10 +320,8 @@
             addLog(`❤️ HEALING FOUNTAIN: Found a safe oasis! ${rarityText} Restored ${healAmount} heart(s).`, '#55ff55');
             renderHearts();
             
-            setTimeout(() => {
-                worldMap[playerY][playerX] = 'player';
-                createGridUI();
-            }, 800);
+            // Re-render immediately to place the wizard on top of the heart asset tile safely
+            createGridUI();
         }
 
         function spawnMonster() {
@@ -374,7 +375,7 @@
 
         function endCombat() {
             currentMob = null;
-            worldMap[playerY][playerX] = 'player';
+            // Removed line resetting tile data map back to player so it permanently remains a mob square style layer
             createGridUI();
             document.getElementById('combat-zone').style.display = 'none';
             document.getElementById('explore-btn').disabled = false;
