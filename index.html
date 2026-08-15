@@ -3,233 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Paper Roguelike</title>
+    <title>Minecraft Roguelike - Grid Edition</title>
     <style>
+        /* Import a clean pixelated retro style font */
+        @import url('https://googleapis.com');
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a1a;
-            color: #e0e0e0;
+            font-family: 'Press Start 2P', monospace;
+            background-color: #141414;
+            color: #fff;
             margin: 0;
             padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            font-size: 11px;
+            line-height: 1.6;
         }
-        h1, h2 { color: #55ff55; text-shadow: 2px 2px #003300; margin-bottom: 5px; }
+
+        h1 {
+            color: #55ff55;
+            text-shadow: 3px 3px #003300;
+            font-size: 1.6rem;
+            margin-bottom: 2px;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 9px;
+            color: #aaa;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
         .container {
-            max-width: 800px;
+            max-width: 600px;
             width: 100%;
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            border: 3px solid #444;
-            margin-bottom: 20px;
+            background: #2c2c2c;
+            padding: 15px;
+            border: 4px solid #1e1e1e;
+            box-shadow: inset -4px -4px #111, inset 4px 4px #555;
+            margin-bottom: 15px;
+            box-sizing: border-box;
         }
-        .stats-bar {
+
+        /* Heart Container Elements */
+        .hearts-container {
+            display: inline-flex;
+            gap: 2px;
+        }
+        .heart {
+            width: 14px;
+            height: 14px;
+            background-color: #ff2222;
+            position: relative;
+            transform: rotate(-45deg);
+            margin-top: 3px;
+            display: inline-block;
+            box-shadow: inset -2px -2px #aa0000;
+        }
+        .heart:before, .heart:after {
+            content: "";
+            width: 14px;
+            height: 14px;
+            background-color: #ff2222;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: inset -2px -2px #aa0000;
+        }
+        .heart:before { top: -7px; left: 0; }
+        .heart:after { top: 0; left: 7px; }
+        
+        .heart.empty { background-color: #444 !important; box-shadow: none; }
+        .heart.empty:before, .heart.empty:after { background-color: #444 !important; box-shadow: none; }
+
+        .stats-row {
             display: flex;
-            justify-content: space-around;
-            background: #111;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border: 2px solid #555;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            align-items: center;
+            background: #151515;
+            padding: 12px;
+            border: 3px solid #333;
+            margin-bottom: 15px;
         }
-        .emerald { color: #55ff55; }
-        .hp { color: #ff5555; }
+
+        .emerald-text { color: #55ff55; }
+
+        /* The Game Map Grid */
+        .map-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 55px);
+            grid-template-rows: repeat(5, 55px);
+            gap: 4px;
+            background: #111;
+            padding: 6px;
+            border: 4px solid #444;
+        }
+        .cell {
+            background-color: #222;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            position: relative;
+            image-rendering: pixelated;
+        }
+        .cell.unexplored { background-color: #1a1a1a; border-color: #222; }
+        .cell.player { background-color: #5555ff !important; border-color: #7777ff; box-shadow: inset -4px -4px #3333cc; }
+        .cell.tunnel { background-color: #555; border-color: #777; box-shadow: inset -4px -4px #333; }
+        .cell.mob { background-color: #3d2d2d; border-color: #ff5555; }
+
+        /* Minecraft Styled Pixel Buttons */
         .btn {
-            background-color: #5555ff;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 1.1rem;
-            font-weight: bold;
+            font-family: 'Press Start 2P', monospace;
+            background-color: #4a4a4a;
+            color: #e0e0e0;
+            border: 3px solid #000;
+            padding: 10px 15px;
+            font-size: 10px;
             cursor: pointer;
-            border-radius: 5px;
-            box-shadow: 0 4px #0000aa;
+            box-shadow: inset -3px -3px #222, inset 3px 3px #777;
             margin: 5px;
-            transition: 0.1s;
+            text-transform: uppercase;
         }
-        .btn:active {
-            box-shadow: 0 0px #0000aa;
-            transform: translateY(4px);
-        }
-        .btn-danger { background-color: #ff5555; box-shadow: 0 4px #aa0000; }
-        .btn-danger:active { box-shadow: 0 0px #aa0000; }
-        .log-box {
-            background: #111;
-            border: 2px solid #555;
-            padding: 15px;
-            height: 150px;
+        .btn:hover { background-color: #5a5a5a; color: #fff; }
+        .btn:active { box-shadow: inset 3px 3px #222, inset -3px -3px #777; padding-top: 11px; padding-bottom: 9px; }
+        .btn:disabled { background-color: #222; color: #555; box-shadow: none; cursor: not-allowed; }
+        .btn-action { background-color: #00aa00; box-shadow: inset -3px -3px #006600, inset 3px 3px #55ff55; color: #fff; }
+        .btn-action:hover { background-color: #00bf00; }
+        .btn-danger { background-color: #aa0000; box-shadow: inset -3px -3px #660000, inset 3px 3px #ff5555; color: #fff; }
+        .btn-danger:hover { background-color: #cc0000; }
+
+        .log-container {
+            background: #000;
+            border: 3px solid #444;
+            padding: 12px;
+            height: 90px;
             overflow-y: auto;
-            border-radius: 5px;
-            font-family: monospace;
-            margin-bottom: 20px;
-            color: #fff;
+            color: #aaa;
+            font-size: 8px;
+            text-transform: uppercase;
         }
-        .combat-zone {
-            background: #3d2d2d;
-            border: 2px solid #ff5555;
+
+        .combat-overlay {
+            background: #331111;
+            border: 4px solid #ff5555;
             padding: 15px;
-            border-radius: 5px;
             margin-top: 15px;
+            text-align: center;
             display: none;
         }
     </style>
 </head>
 <body>
 
-    <h1>⛏️ Minecraft Roguelike</h1>
-    <p style="margin-top:0; color:#aaa;">Solo Runs • Shared Lobby System</p>
+    <h1>⛏️ MINECRAFT ROGUELIKE</h1>
+    <div class="subtitle">Procedural Screen Map Mod</div>
 
-    <!-- MAIN GAME PANEL -->
     <div class="container">
-        <div class="stats-bar">
-            <span>❤️ HP: <span id="current-hp" class="hp">10</span>/10</span>
-            <span>🟢 Run Emeralds: <span id="run-emeralds" class="emerald">0</span></span>
-            <span>🏛️ Total Vault Emeralds: <span id="vault-emeralds" class="emerald">0</span></span>
+        <!-- Stats -->
+        <div class="stats-row">
+            <div>
+                <span style="display:block; font-size:8px; margin-bottom:4px; color:#aaa;">HEALTH POOL</span>
+                <div class="hearts-container" id="hearts-box"></div>
+            </div>
+            <div style="text-align: right;">
+                <div>RUN: <span id="run-emeralds" class="emerald-text">0</span> 🟢</div>
+                <div style="font-size: 8px; margin-top:4px; color:#aaa;">VAULT: <span id="vault-emeralds" class="emerald-text">0</span> 🟢</div>
+            </div>
         </div>
 
+        <!-- Visual Map -->
+        <div class="map-wrapper">
+            <div class="grid" id="map-grid"></div>
+        </div>
+
+        <!-- Primary Controls -->
         <div id="action-area" style="text-align: center;">
-            <button class="btn" id="explore-btn" onclick="exploreCave()">Mine Next Room! (Roll Die)</button>
+            <button class="btn btn-action" id="explore-btn" onclick="movePlayer()">Mine Next Chunk</button>
         </div>
 
-        <div class="combat-zone" id="combat-zone">
-            <h3 id="mob-title" style="color: #ff5555; margin-top: 0;">⚠️ Mob Spawned!</h3>
-            <p id="mob-stats"></p>
-            <button class="btn btn-danger" id="attack-btn" onclick="attackMob()">Roll Attack Die</button>
+        <!-- Combat -->
+        <div class="combat-overlay" id="combat-zone">
+            <div id="mob-avatar" style="font-size:32px; margin-bottom:10px;"></div>
+            <h3 id="mob-title" style="color: #ff5555; margin: 0 0 10px 0; font-size:12px;">MOB DETECTED</h3>
+            <p id="mob-stats" style="font-size:9px; margin-bottom:15px;"></p>
+            <button class="btn btn-danger" onclick="attackMob()">Strike Target</button>
         </div>
 
-        <h3 style="margin-bottom: 5px;">📜 Adventure Log:</h3>
-        <div class="log-box" id="log">You stand at the entrance of a dark cave system... Ready your pickaxe!</div>
+        <p style="font-size:8px; color:#aaa; margin: 15px 0 5px 2px;">COMMUNICATION LOG:</p>
+        <div class="log-container" id="log">Ready to explore chunk (0,0). Let's dig!</div>
     </div>
 
     <script>
-        // Game State Variables
+        // Core Config
         let hp = 10;
         let runEmeralds = 0;
         let vaultEmeralds = 0;
 
-        // Active Monster Tracking
+        // Position Trackers
+        let playerX = 0;
+        let playerY = 0;
         let currentMob = null;
 
-        const logBox = document.getElementById('log');
+        // Generated Map Matrix
+        let worldMap = Array(5).fill().map(() => Array(5).fill('unexplored'));
+        worldMap[0][0] = 'player'; // Start origin
 
-        function addLog(text, color = '#fff') {
-            logBox.innerHTML += `<div style="color: ${color}">${text}</div>`;
+        function renderHearts() {
+            const container = document.getElementById('hearts-box');
+            container.innerHTML = '';
+            for(let i=0; i<10; i++) {
+                let heartHtml = i < hp ? '<div class="heart"></div>' : '<div class="heart empty"></div>';
+                container.innerHTML += heartHtml;
+            }
+        }
+
+        function createGridUI() {
+            const gridEl = document.getElementById('map-grid');
+            gridEl.innerHTML = '';
+            for(let y=0; y<5; y++) {
+                for(let x=0; x<5; x++) {
+                    const cellType = worldMap[y][x];
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${cellType}`;
+                    
+                    if(cellType === 'player') cell.innerHTML = "🧙";
+                    if(cellType === 'mob') cell.innerHTML = "👾";
+                    if(cellType === 'tunnel') cell.innerHTML = "░";
+                    
+                    gridEl.appendChild(cell);
+                }
+            }
+        }
+
+        const logBox = document.getElementById('log');
+        function addLog(text, color = '#aaa') {
+            logBox.innerHTML += `<div style="color: ${color}; margin-bottom:4px;">> ${text}</div>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // 🎲 1. CAVE EXPLORATION
-        function exploreCave() {
+        function movePlayer() {
             if (hp <= 0) return;
+
+            // Simple snake/procedural pathing down the matrix
+            worldMap[playerY][playerX] = 'tunnel'; // Leave path trail
             
-            // Simulating a 6-sided die roll
-            let roll = Math.floor(Math.random() * 6) + 1;
-            addLog(`🎲 You rolled a ${roll}!`, '#aaa');
-
-            if (roll === 3 || roll === 4) {
-                spawnMonster();
-            } else {
-                addLog("🧱 Dark Tunnel: The path is clear. Draw a safe straight line on your graph paper.", '#ffff55');
+            playerX++;
+            if(playerX >= 5) {
+                playerX = 0;
+                playerY++;
             }
-        }
 
-        // 🧟 2. MOB GENERATION
-        const mobs = [
-            { name: "🏹 Skeleton", hp: 3, dmg: 1, reward: 1 },
-            { name: "🏹 Skeleton", hp: 3, dmg: 1, reward: 1 },
-            { name: "🧟 Zombie", hp: 4, dmg: 1, reward: 1 },
-            { name: "🧟 Zombie", hp: 4, dmg: 1, reward: 1 },
-            { name: "💥 Creeper", hp: 5, dmg: 2, reward: 2 },
-            { name: "👁️ Enderman", hp: 6, dmg: 2, reward: 3 }
-        ];
-
-        function spawnMonster() {
-            let roll = Math.floor(Math.random() * 6);
-            // Deep copy mob stats
-            currentMob = { ...mobs[roll] };
-
-            document.getElementById('explore-btn').disabled = true;
-            document.getElementById('combat-zone').style.display = 'block';
-            updateCombatUI();
-
-            addLog(`⚠️ A wild ${currentMob.name} jumped from the shadows!`, '#ff5555');
-        }
-
-        function updateCombatUI() {
-            if (currentMob) {
-                document.getElementById('mob-title').innerText = `⚔️ Fighting ${currentMob.name}`;
-                document.getElementById('mob-stats').innerText = `Enemy HP: ${currentMob.hp} | Enemy Attack Damage: ${currentMob.dmg}`;
-            }
-        }
-
-        // ⚔️ 3. COMBAT ENGINE
-        function attackMob() {
-            if (!currentMob || hp <= 0) return;
-
-            // Player Attack Roll
-            let playerRoll = Math.floor(Math.random() * 6) + 1;
-            addLog(`⚔️ You attack! Rolled a ${playerRoll} = Deal ${playerRoll} DMG.`, '#55ff55');
-
-            // Check if Creeper exploded on turn 1
-            if (currentMob.name === "💥 Creeper" && playerRoll < currentMob.hp) {
-                hp -= 3;
-                addLog(`💥 Tssss... BOOM! The Creeper exploded! You took 3 damage and got 0 loot.`, '#ff5555');
-                endCombat(false);
-                checkDeath();
+            if(playerY >= 5) {
+                // Completed the layout map! Win reward and refresh map
+                addLog("🎉 LEVEL CLEAR! You navigated the cavern block. +5 Bonus Emeralds!", "#55ff55");
+                runEmeralds += 5;
+                document.getElementById('run-emeralds').innerText = runEmeralds;
+                resetWorldMap();
                 return;
             }
 
-            // Standard Damage Application
-            if (playerRoll >= currentMob.hp) {
-                // Victory!
-                runEmeralds += currentMob.reward;
-                addLog(`🎉 Defeated the ${currentMob.name}! Found +${currentMob.reward} Emerald(s).`, '#55ff55');
-                document.getElementById('run-emeralds').innerText = runEmeralds;
-                endCombat(true);
+            // Target spot generation
+            let roll = Math.floor(Math.random() * 6) + 1;
+            addLog(`DICE ROLL: ${roll}`, '#777');
+
+            if (roll === 3 || roll === 4) {
+                worldMap[playerY][playerX] = 'mob';
+                createGridUI();
+                spawnMonster();
             } else {
-                // Monster Counter-attacks
-                currentMob.hp -= playerRoll;
-                hp -= currentMob.dmg;
-                addLog(`💥 The ${currentMob.name} survives with ${currentMob.hp} HP left and hits you back for ${currentMob.dmg} DMG.`, '#ff5555');
-                document.getElementById('current-hp').innerText = hp;
-                updateCombatUI();
-                checkDeath();
-            }
-        }
-
-        function endCombat(won) {
-            currentMob = null;
-            document.getElementById('combat-zone').style.display = 'none';
-            document.getElementById('explore-btn').disabled = false;
-        }
-
-        function checkDeath() {
-            if (hp <= 0) {
-                hp = 0;
-                document.getElementById('current-hp').innerText = hp;
-                vaultEmeralds += runEmeralds;
-                document.getElementById('vault-emeralds').innerText = vaultEmeralds;
-
-                addLog(`💀 YOU DIED! Lost current inventory and map. Mined Emeralds safely banked into your vault.`, '#ff5555');
-                
-                // Show Respawn Button
-                document.getElementById('action-area').innerHTML = `<button class="btn btn-danger" onclick="respawn()">Respawn at Camp</button>`;
-                document.getElementById('combat-zone').style.display = 'none';
-            }
-        }
-
-        function respawn() {
-            hp = 10;
-            runEmeralds = 0;
-            document.getElementById('current-hp').innerText = hp;
-            document.getElementById('run-emeralds').innerText = runEmeralds;
-            document.getElementById('action-area').innerHTML = `<button class="btn" id="explore-btn" onclick="exploreCave()">Mine Next Room! (Roll Die)</button>`;
-            addLog(`--- Fresh Spawn --- Ready your pickaxe for a new run!`, '#aaa');
-        }
-    </script>
-</body>
-</html>
+                worldMap[playerY][playerX] = 'player';
