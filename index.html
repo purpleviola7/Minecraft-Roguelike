@@ -87,8 +87,23 @@
             margin-bottom: 15px;
         }
 
-        .emerald-text { color: #55ff55; }
-        .gold-text { color: #ffaa00; }
+        /* Upgraded Currency Typography Readouts */
+        .currency-display-panel {
+            text-align: right; 
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            line-height: 1.8;
+        }
+        .emerald-text { color: #55ff55; font-weight: bold; }
+        .gold-text { color: #ffaa00; font-weight: bold; }
+        
+        .vault-container-label {
+            margin-top: 6px; 
+            border-top: 2px solid #444; 
+            padding-top: 5px; 
+            font-size: 11px;
+            color: #aaa;
+        }
 
         .map-wrapper {
             display: flex;
@@ -203,10 +218,10 @@
                 <span style="display:block; font-size:8px; margin-bottom:4px; color:#aaa;" id="dmg-label">ATK: 1-6 | HP POOL</span>
                 <div class="hearts-container" id="hearts-box"></div>
             </div>
-            <div style="text-align: right; font-size: 8px;">
+            <div class="currency-display-panel">
                 <div>RUN EME: <span id="run-emeralds" class="emerald-text">0</span> 🟢</div>
                 <div>RUN GLD: <span id="run-gold" class="gold-text">0</span> 🟡</div>
-                <div style="margin-top:4px; border-top:1px solid #444; padding-top:2px; color:#aaa;">
+                <div class="vault-container-label">
                     VAULT EME: <span id="vault-emeralds" class="emerald-text">0</span> 🟢
                 </div>
             </div>
@@ -338,17 +353,20 @@
 
             let randomRoll = Math.random();
             
-            if (randomRoll < 0.08) {
+            // Significant balance adjustment: Chest room spawn weight lowered down to 1.5% chance (0.015)
+            let chestChance = 0.015;
+
+            if (randomRoll < chestChance) {
                 worldMap[playerY][playerX] = 'chest';
                 createGridUI();
                 openChestCardZone();
             }
-            else if (randomRoll < 0.08 + finalMobChance) {
+            else if (randomRoll < chestChance + finalMobChance) {
                 worldMap[playerY][playerX] = 'mob';
                 createGridUI();
                 spawnMonster();
             } 
-            else if (randomRoll < 0.08 + finalMobChance + 0.12) {
+            else if (randomRoll < chestChance + finalMobChance + 0.12) {
                 worldMap[playerY][playerX] = 'heal';
                 createGridUI();
                 triggerHealingRoom();
