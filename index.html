@@ -192,7 +192,6 @@
         <p style="font-size:8px; color:#aaa; margin: 15px 0 5px 2px;">COMMUNICATION LOG:</p>
         <div class="log-container" id="log">Ready to explore chunk (0,0). Let's dig!</div>
     </div>
-
     <script>
         let hp = 10;
         let runEmeralds = 0;
@@ -273,8 +272,106 @@
             playerX = 0;
             playerY = 0;
             
-            // Clean, hardcoded setup to completely bypass the chat formatting bug
             let row0 = ['player', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
             let row1 = ['unexplored', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
             let row2 = ['unexplored', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
             let row3 = ['unexplored', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
+            let row4 = ['unexplored', 'unexplored', 'unexplored', 'unexplored', 'unexplored'];
+            
+            worldMap = [row0, row1, row2, row3, row4];
+            createGridUI();
+        }
+
+        const mobs = [
+            { name: "SKELETON", hp: 3, dmg: 1, reward: 1, sprite: "🏹" },
+            { name: "ZOMBIE", hp: 4, dmg: 1, reward: 1, sprite: "🧟" },
+            { name: "CREEPER", hp: 5, dmg: 2, reward: 2, sprite: "💥" },
+            { name: "ENDERMAN", hp: 6, dmg: 2, reward: 3, sprite: "👁️" }
+        ];
+
+        function spawnMonster() {
+            let roll = Math.floor(Math.random() * mobs.length);
+            currentMob = { ...mobs[roll] };
+
+            document.getElementById('explore-btn').disabled = true;
+            document.getElementById('combat-zone').style.display = 'block';
+            
+            document.getElementById('mob-avatar').innerText = currentMob.sprite;
+            document.getElementById('mob-title').innerText = `HOSTILE: ${currentMob.name}`;
+            updateCombatUI();
+
+            addLog(`⚠️ WARNING: ${currentMob.name} DETECTED IN CHUNK!`, '#ff5555');
+        }
+
+        function updateCombatUI() {
+            if (currentMob) {
+                document.getElementById('mob-stats').innerText = `HP: ${currentMob.hp} | DAMAGE: ${currentMob.dmg}`;
+            }
+        }
+
+        function attackMob() {
+            if (!currentMob || hp <= 0) return;
+
+            let playerRoll = Math.floor(Math.random() * 6) + 1;
+            addLog(`SWORD STRIKE: HIT FOR ${playerRoll} DAMAGE`, '#55ff55');
+
+            if (currentMob.name === "CREEPER" && playerRoll < currentMob.hp) {
+                hp -= 3;
+                addLog(`💥 BOOM! Creeper exploded. Suffered 3 hearts damage.`, '#ff5555');
+                renderHearts();
+                endCombat();
+                checkDeath();
+                return;
+            }
+
+            if (playerRoll >= currentMob.hp) {
+                runEmeralds += currentMob.reward;
+                addLog("🎉 REWARD RECLAIMED: +" + currentMob.reward + " EMERALD", "#55ff55");
+                document.getElementById('run-emeralds').innerText = runEmeralds;
+                endCombat();
+            } else {
+                currentMob.hp -= playerRoll;
+                hp -= currentMob.dmg;
+                addLog(`💥 TARGET COUNTER-STRIKE: SUFFERED ${currentMob.dmg} DAMAGE`, '#ff5555');
+                renderHearts();
+                updateCombatUI();
+                checkDeath();
+            }
+        }
+
+        function endCombat() {
+            currentMob = null;
+            worldMap[playerY][playerX] = 'player';
+            createGridUI();
+            document.getElementById('combat-zone').style.display = 'none';
+            document.getElementById('explore-btn').disabled = false;
+        }
+
+        function checkDeath() {
+            if (hp <= 0) {
+                hp = 0;
+                renderHearts();
+                vaultEmeralds += runEmeralds;
+                document.getElementById('vault-emeralds').innerText = vaultEmeralds;
+
+                addLog(`💀 YOU DIED. MINED EMERALDS TRANSFERRED TO LOBBY VAULT.`, '#ff5555');
+                document.getElementById('action-area').innerHTML = `<button class="btn btn-danger" onclick="respawn()">RESPAWN</button>`;
+                document.getElementById('combat-zone').style.display = 'none';
+            }
+        }
+
+        function respawn() {
+            hp = 10;
+            runEmeralds = 0;
+            renderHearts();
+            document.getElementById('run-emeralds').innerText = runEmeralds;
+            document.getElementById('action-area').innerHTML = `<button class="btn btn-action" id="explore-btn" onclick="movePlayer()">Mine Next Chunk</button>`;
+            resetWorldMap();
+            addLog(`--- RESPONDING TO CAMP --- WORLD RESET.`, '#aaa');
+        }
+
+        renderHearts();
+        resetWorldMap();
+    </script>
+</body>
+</html>
