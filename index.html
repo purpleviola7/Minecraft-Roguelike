@@ -115,6 +115,7 @@
         .cell.player { background-color: #5555ff !important; border-color: #7777ff; box-shadow: inset -4px -4px #3333cc; }
         .cell.tunnel { background-color: #555; border-color: #777; box-shadow: inset -4px -4px #333; }
         .cell.mob { background-color: #3d2d2d; border-color: #ff5555; }
+        .cell.heal { background-color: #2d3d2d; border-color: #55ff55; }
 
         .btn {
             font-family: 'Press Start 2P', monospace;
@@ -223,6 +224,7 @@
                     if(cellType === 'player') cell.innerHTML = "🧙";
                     if(cellType === 'mob') cell.innerHTML = "👾";
                     if(cellType === 'tunnel') cell.innerHTML = "░";
+                    if(cellType === 'heal') cell.innerHTML = "❤️";
                     
                     gridEl.appendChild(cell);
                 }
@@ -261,11 +263,44 @@
                 worldMap[playerY][playerX] = 'mob';
                 createGridUI();
                 spawnMonster();
+            } else if (roll === 6) {
+                worldMap[playerY][playerX] = 'heal';
+                createGridUI();
+                triggerHealingRoom();
             } else {
                 worldMap[playerY][playerX] = 'player';
                 addLog("TUNNEL SECURE. Advanced safely.", '#ffff55');
                 createGridUI();
             }
+        }
+
+        function triggerHealingRoom() {
+            // Weighted math: 60% chance for 1, 25% for 2, 11% for 3, 4% for 4
+            let rateRoll = Math.floor(Math.random() * 100) + 1;
+            let healAmount = 1;
+
+            if (rateRoll <= 4) {
+                healAmount = 4;
+            } else if (rateRoll <= 15) {
+                healAmount = 3;
+            } else if (rateRoll <= 40) {
+                healAmount = 2;
+            } else {
+                healAmount = 1;
+            }
+
+            hp += healAmount;
+            if (hp > 10) hp = 10; // Max cap
+
+            let rarityText = healAmount === 4 ? "🌟 ULTRA RARE! 🌟" : healAmount === 3 ? "✨ RARE! ✨" : "";
+            addLog(`❤️ HEALING FOUNTAIN: Found a safe oasis! ${rarityText} Restored ${healAmount} heart(s).`, '#55ff55');
+            renderHearts();
+            
+            // Mark position over after event
+            setTimeout(() => {
+                worldMap[playerY][playerX] = 'player';
+                createGridUI();
+            }, 800);
         }
 
         function resetWorldMap() {
@@ -281,7 +316,6 @@
             worldMap = [row0, row1, row2, row3, row4];
             createGridUI();
         }
-
         const mobs = [
             { name: "SKELETON", hp: 3, dmg: 1, reward: 1, sprite: "🏹" },
             { name: "ZOMBIE", hp: 4, dmg: 1, reward: 1, sprite: "🧟" },
